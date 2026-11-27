@@ -1,0 +1,40 @@
+# On a version tag (v1.0.0-alpha.1, v1.2.3, ...): checks that the starter installs and builds, packs the clean starter zip
+# (tools/release.mjs) and attaches it to a GitHub Release for that tag, with generated notes.
+# The tag must match the version in package.json (v + version), so the zip's name and the release agree.
+# A version with a pre-release part (1.0.0-alpha.1, 1.0.0-beta.2) is published as a GitHub pre-release.
+#   git tag v1.0.0-alpha.1 && git push origin v1.0.0-alpha.1
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)"
+            exit 1
+          fi
+      - run: npm ci
+      - run: npm run build
+      - run: npm run baseline
+      - run: npm run release
+      - name: Create the release and attach the zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prerelease=""
+          case "$GITHUB_REF_NAME" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$GITHUB_REF_NAME" release/*.zip --title "$GITHUB_REF_NAME" --generate-notes $prerelease

@@ -1,0 +1,24 @@
+{
+  "name": "js13k-starter",
+  "version": "1.0.0-alpha.1",
+  "description": "A js13k starter: one-file build, comment stripping, build ID, zip and roadroller size baseline, optional surprisal sizing, GitHub Pages deploy",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "ship": "node tools/ship.mjs",
+    "baseline": "node tools/ship.mjs --baseline",
+    "baseline:search": "node tools/build.mjs && node tools/roadroll-search.mjs",
+    "baseline:cheap": "node tools/build.mjs && node tools/roadroll-search.mjs --cheap",
+    "release": "node tools/release.mjs"
+  },
+  "devDependencies": {
+    "roadroller": "^2.1.0",
+    "terser": "^5.51.4"
+  }
+}

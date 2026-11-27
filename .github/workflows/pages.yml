@@ -1,0 +1,48 @@
+# Builds dist/index.html on every push to main and publishes it to GitHub Pages.
+# Turn Pages on first: repo Settings -> Pages -> Source: GitHub Actions.
+# The build needs only Node (no npm install): tools/build.mjs uses Node's standard library alone.
+#
+# The deploy step sometimes fails on GitHub's side with "No artifacts named github-pages" even though the upload
+# succeeded. It's transient, so the deploy is retried once after a short wait; re-running the job also fixes it.
+name: pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url || steps.deploy-retry.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/build.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - if: steps.deploy.outcome == 'failure'
+        run: |
+          echo "deploy failed (often GitHub's transient 'No artifacts named github-pages'); retrying in 30 s"
+          sleep 30
+      - id: deploy-retry
+        if: steps.deploy.outcome == 'failure'
+        uses: actions/deploy-pages@v4
